@@ -69,7 +69,7 @@ static const unsigned freqs[] = { 400000, 300000, 200000, 100000 };
  * So we allow it it to be disabled.
  */
 bool use_spi_crc = 0;
-module_param(use_spi_crc, bool, 0);
+module_param(use_spi_crc, bool, 0644);
 
 /*
  * Internal function. Schedule delayed work in the MMC work queue.
@@ -4043,9 +4043,8 @@ int mmc_cache_ctrl(struct mmc_host *host, u8 enable)
 
 	return err;
 
-
-
 }
+
 EXPORT_SYMBOL(mmc_cache_ctrl);
 #ifdef CONFIG_PM
 
@@ -4078,6 +4077,14 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 			err = host->bus_ops->pre_suspend(host);
 		if (!err)
 			break;
+
+		if (!mmc_card_is_removable(host)) {
+			dev_warn(mmc_dev(host),
+				 "pre_suspend failed for non-removable host: "
+				 "%d\n", err);
+			/* Avoid removing non-removable hosts */
+			break;
+		}
 
 		/* Calling bus_ops->remove() with a claimed host can deadlock */
 		host->bus_ops->remove(host);
